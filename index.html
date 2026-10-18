@@ -209,8 +209,8 @@ canvas#game{position:absolute;inset:0;display:block;touch-action:none}
     </div>
   </div>
 
-  <div class="hint" id="hintL"><b>◀</b>TAHAN<br>KIRI</div><div class="hint" id="hintR"><b>▶</b>TAHAN<br>KANAN</div>
-  <div id="tut"><div class="t">◀ TAHAN<small>dorong badan ke kiri</small></div><div class="t mid">Badan miring? Tahan sisi <u>sebaliknya</u> · jarum di HIJAU</div><div class="t">TAHAN ▶<small>dorong badan ke kanan</small></div></div>
+  <div class="hint" id="hintL"><b>◀</b><span id="hintLt">TAHAN<br>KIRI</span></div><div class="hint" id="hintR"><b>▶</b><span id="hintRt">TAHAN<br>KANAN</span></div>
+  <div id="tut"><div class="t" id="tutL">◀ TAHAN<small>dorong badan ke kiri</small></div><div class="t mid" id="tutM">Badan miring? Tahan sisi <u>sebaliknya</u> · jarum di HIJAU</div><div class="t" id="tutR">TAHAN ▶<small>dorong badan ke kanan</small></div></div>
   <div id="banner"><b id="bnTitle">REM MENDADAK!</b><span id="bnSub">tahan KIRI ◀</span></div>
   <div id="toast"></div>
 
@@ -222,8 +222,8 @@ canvas#game{position:absolute;inset:0;display:block;touch-action:none}
       <p class="tag">Berdiri dari <b>Tebet</b> sampai <b>Manggarai</b> tanpa nyusruk.</p>
     </div>
     <div class="card how">
-      <div class="how-item"><div class="kbd">◀ TAHAN ▶</div><p>Kereta bikin badan miring. <b>Miring ke kanan? Tahan KIRI.</b> Miring ke kiri? Tahan KANAN. Jaga jarum di <b>hijau</b>.</p></div>
-      <div class="how-item"><div class="kbd">⇆ SWIPE</div><p>Swipe cepat ke samping buat geser & ngehindar rintangan.</p></div>
+      <div class="how-item"><div class="kbd" id="how1k">◀ TAHAN ▶</div><p id="how1">Kereta bikin badan miring. <b>Miring ke kanan? Tahan KIRI.</b> Miring ke kiri? Tahan KANAN. Jaga jarum di <b>hijau</b>.</p></div>
+      <div class="how-item"><div class="kbd" id="how2k">⇆ SWIPE</div><p id="how2">Swipe cepat ke samping buat geser & ngehindar rintangan.</p></div>
       <div class="foes">
         <div class="foe"><canvas class="ico" data-ico="ransel"></canvas><span>Bapak Ransel Gede</span></div>
         <div class="foe"><canvas class="ico" data-ico="aroma"></canvas><span>Aroma Minyak Angin</span></div>
@@ -285,6 +285,7 @@ canvas#game{position:absolute;inset:0;display:block;touch-action:none}
   <section class="screen" id="pauseScreen">
     <div class="stamp small">ISTIRAHAT</div>
     <button class="btn primary big" id="resumeBtn">▶ LANJUT</button>
+    <button class="btn" id="ctrlBtn">🎮 Kontrol: Geser</button>
     <button class="btn" id="storeBtnPause">🛒 Store</button>
     <button class="btn" id="muteBtn">🔊 Suara: ON</button>
     <button class="btn ghost" id="quitBtn">↻ Ulang dari Tebet</button>
@@ -683,12 +684,12 @@ const G={obs:[],oxy:100,roll:0,strapA:0,shake:0,shakeX:0,shakeY:0,flash:0,aromaF
 const P={ang:0,vel:0,X:0,lane:0,side:1,input:0,fallAng:0,fallV:0,fallDir:1,drop:0};
 const T={t:rand(0,50),phase:'idle',next:4.5,pt:0,dur:0.9,dir:1,force:0};
 const Inp={tl:false,tr:false,kl:false,kr:false,ml:false,mr:false};
-let best=0,spentAll=0,muted=false,INV={kayu:0,kursi:0},starter=false;
-try{best=+localStorage.getItem('skrl_best')||0;spentAll=+localStorage.getItem('skrl_spent')||0;muted=localStorage.getItem('skrl_mute')==='1';const iv=JSON.parse(localStorage.getItem('skrl_inv')||'null');if(iv)INV={kayu:iv.kayu|0,kursi:iv.kursi|0};else{INV={kayu:1,kursi:1};starter=true;}}catch(e){INV={kayu:1,kursi:1};starter=true;}
+let CTRL='drag',best=0,spentAll=0,muted=false,INV={kayu:0,kursi:0},starter=false;
+try{best=+localStorage.getItem('skrl_best')||0;spentAll=+localStorage.getItem('skrl_spent')||0;muted=localStorage.getItem('skrl_mute')==='1';if(localStorage.getItem('skrl_ctrl')==='hold')CTRL='hold';const iv=JSON.parse(localStorage.getItem('skrl_inv')||'null');if(iv)INV={kayu:iv.kayu|0,kursi:iv.kursi|0};else{INV={kayu:1,kursi:1};starter=true;}}catch(e){INV={kayu:1,kursi:1};starter=true;}
 
 function resetRun(){
   Object.assign(G,{obs:[],oxy:100,time:0,dist:0,spawnT:8,danger:0,segIdx:0,segStart:0,segLen:segLen(0),invuln:0,resumeT:1.3,flash:0,aromaFx:0,pFade:1,floaters:[],tutorial:8,introToast:false,doorFlash:0,used:0,restT:0,lowNudge:false,failReason:'',fallT:0});
-  Object.assign(P,{ang:0,vel:0,X:0,lane:0,side:1,input:0,fallAng:0,fallV:0,drop:0});
+  Object.assign(P,{ang:0,vel:0,X:0,tx:0,ref:0,lane:0,side:1,input:0,fallAng:0,fallV:0,drop:0});G.thumb=null;
   Object.assign(T,{phase:'idle',next:13,pt:0});
   hideBanner();updateRoute();
 }
@@ -721,7 +722,7 @@ function addFloat(txt,col){G.floaters.push({wx:P.X,wz:TZ(PZ),k:G.floaters.length
 function updateRoute(){$('stFrom').textContent=stName(G.segIdx);$('stTo').textContent=stName(G.segIdx+1);}
 const PRICE={kayu:1000,kursi:2000},ITEM_NAME={kayu:'Hirupan Kayu Putih',kursi:'Kursi Prioritas'};
 function saveInv(){try{localStorage.setItem('skrl_inv',JSON.stringify(INV));}catch(e){}}
-function clearInputs(){touches.clear();Inp.tl=Inp.tr=Inp.kl=Inp.kr=Inp.ml=Inp.mr=false;}
+function clearInputs(){touches.clear();dragId=null;G.thumb=null;Inp.tl=Inp.tr=Inp.kl=Inp.kr=Inp.ml=Inp.mr=false;}
 function saveStats(){try{localStorage.setItem('skrl_best',best);localStorage.setItem('skrl_spent',spentAll);}catch(e){}}
 function refreshMenu(){$('bestVal').textContent=best.toLocaleString('id-ID')+' m';$('spentAll').textContent=rp(spentAll);}
 
@@ -847,8 +848,8 @@ function spawn(diff){
 function hitOb(o){
   o.hit=true;o.hitT=0;G.invuln=0.7;
   const dir=Math.abs(P.X-o.X)<0.05?(Math.random()<.5?-1:1):Math.sign(P.X-o.X);
-  if(o.type==='ransel'){G.oxy-=16;P.vel+=dir*60;addFloat('-16 KENA RANSEL!','#ff8b80');}
-  else{G.oxy-=12;P.vel+=dir*80;P.lane=clamp(P.lane+dir,-1,1);addFloat('-12 DIDORONG!','#ff8b80');}
+  if(o.type==='ransel'){G.oxy-=12;P.vel+=dir*60;addFloat('-12 KENA RANSEL!','#ff8b80');}
+  else{G.oxy-=10;P.vel+=dir*80;if(CTRL==='drag'){shiftTarget(dir*0.45);}else P.lane=clamp(P.lane+dir,-1,1);addFloat('-10 DIDORONG!','#ff8b80');}
   G.flash=1;G.shake=5;SFX.hit();buzz(50);
 }
 
@@ -861,7 +862,7 @@ function updateTrain(dt,amp,diff){
     T.next-=dt;
     if(T.phase==='idle'&&T.next<=0){T.phase='warn';T.pt=0.9;T.dir=Math.random()<.5?-1:1;showBanner(BRAKES[rint(BRAKES.length)],T.dir);SFX.warn();}
     else if(T.phase==='warn'){T.pt-=dt;if(T.pt<=0){T.phase='brake';T.pt=T.dur=0.95;G.shake=Math.max(G.shake,3);}}
-    else if(T.phase==='brake'){T.pt-=dt;const k=Math.sin((1-T.pt/T.dur)*Math.PI);f+=T.dir*(55+diff*15)*Math.max(0,k);if(T.pt<=0){T.phase='idle';T.next=rand(5,8.5)-Math.min(diff,3)*0.8;hideBanner();}}
+    else if(T.phase==='brake'){T.pt-=dt;const k=Math.sin((1-T.pt/T.dur)*Math.PI);f+=T.dir*(55+diff*15)*(CTRL==='drag'?2.1:1)*Math.max(0,k);if(T.pt<=0){T.phase='idle';T.next=rand(5,8.5)-Math.min(diff,3)*0.8;hideBanner();}}
   }
   T.force=f;
   G.roll+=(clamp(f*0.0011,-0.075,0.075)-G.roll)*Math.min(1,dt*3);
@@ -880,11 +881,24 @@ function updatePlay(dt){
   G.time+=dt;G.tutorial-=dt;
   updateTrain(dt,1,diff);
   const L=Inp.tl||Inp.kl||Inp.ml,R=Inp.tr||Inp.kr||Inp.mr;
-  const u=L&&!R?-1:R&&!L?1:0;
-  P.input=u;if(u)P.side=u;
-  if(G.restT>0){G.restT-=dt;P.ang*=Math.exp(-5*dt);P.vel*=Math.exp(-8*dt);}
-  else{P.vel+=(1.2*P.ang+T.force+u*160)*dt;P.vel*=Math.exp(-3.0*dt);P.ang+=P.vel*dt;}
-  P.X+=(P.lane*LANE-P.X)*Math.min(1,dt*14);
+  if(CTRL==='drag'){
+    // feet follow the thumb; a step toward the tilt "catches" the body (effect fades in ~0.9s so dodging isn't punished forever)
+    if(Inp.kl)P.tx-=1.8*dt;if(Inp.kr)P.tx+=1.8*dt;P.tx=clamp(P.tx,-XMAX,XMAX);
+    const x0=P.X,r0=P.ref;
+    // soft magnet toward the nearest lane centre so the thumb lands cleanly in a lane
+    const lc=clamp(Math.round(P.tx/LANE),-1,1)*LANE,off=P.tx-lc,tgt=Math.abs(off)<0.2?lc+off*0.55:P.tx;
+    P.X+=(tgt-P.X)*Math.min(1,dt*16);P.ref+=(P.X-P.ref)*Math.min(1,dt/0.9);
+    const dx=P.X-x0;P.input=Math.abs(dx)>0.0015?Math.sign(dx):0;if(P.input)P.side=P.input;
+    P.lane=clamp(Math.round(P.X/LANE),-1,1);
+    if(G.restT>0){G.restT-=dt;P.ang*=Math.exp(-5*dt);P.vel*=Math.exp(-8*dt);}
+    else{P.vel+=(-0.25*P.ang+T.force)*dt;P.vel*=Math.exp(-2.0*dt);P.ang+=P.vel*dt-60*(dx-(P.ref-r0));}
+  }else{
+    const u=L&&!R?-1:R&&!L?1:0;
+    P.input=u;if(u)P.side=u;
+    if(G.restT>0){G.restT-=dt;P.ang*=Math.exp(-5*dt);P.vel*=Math.exp(-8*dt);}
+    else{P.vel+=(1.2*P.ang+T.force+u*160)*dt;P.vel*=Math.exp(-3.0*dt);P.ang+=P.vel*dt;}
+    P.X+=(P.lane*LANE-P.X)*Math.min(1,dt*14);
+  }
   const aa=Math.abs(P.ang);
   if(aa>=65){G.danger+=dt;G.shake=Math.max(G.shake,2);if(G.danger>0.75||aa>=80){fail('jatuh');return;}}
   else if(aa<58) G.danger=0;
@@ -898,7 +912,7 @@ function updatePlay(dt){
   let fade=1,inA=false;
   for(const o of G.obs){
     o.z-=o.v*dt;o.t+=dt;if(o.hit)o.hitT+=dt;
-    const dx=Math.abs(o.X-P.X),near=Math.abs(o.z-PZ)<o.depth,over=dx<o.hw+0.1;
+    const dx=Math.abs(o.X-P.X),near=Math.abs(o.z-PZ)<o.depth,over=dx<(CTRL==='drag'?o.hw*0.75+0.06:o.hw+0.1);
     if(near&&over){
       if(o.type==='aroma'){inA=true;if(!o.hit){o.hit=true;o.hitT=0;G.oxy-=5;addFloat('BAU MINYAK ANGIN!','#a6e98a');SFX.cough();}}
       else if(!o.hit&&G.invuln<=0) hitOb(o);
@@ -996,11 +1010,20 @@ function drawFx(){
     ctx.lineWidth=5;ctx.strokeStyle='#191a2e';ctx.strokeText(txt,W/2,H*0.36);ctx.fillStyle='#ffc845';ctx.fillText(txt,W/2,H*0.36);
   }
 }
+function drawThumb(){
+  if(CTRL!=='drag'||state!=='play'||!G.thumb)return;
+  const {x,y}=G.thumb,r=13;
+  ctx.save();ctx.globalAlpha=0.9;ctx.lineWidth=2.2;ctx.strokeStyle='rgba(255,247,230,.85)';ctx.fillStyle='rgba(255,200,69,.22)';
+  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle='rgba(255,247,230,.9)';
+  for(const s of [-1,1]){ctx.beginPath();ctx.moveTo(x+s*(r+4),y-4);ctx.lineTo(x+s*(r+10),y);ctx.lineTo(x+s*(r+4),y+4);ctx.closePath();ctx.fill();}
+  ctx.restore();
+}
 function render(){
   sync3D();renderer.render(scene,camera);
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);
   ctx.setTransform(DPR*S,0,0,DPR*S,0,0);
-  drawLabels();drawFloaters();drawFx();drawGauge();
+  drawLabels();drawFloaters();drawFx();drawGauge();drawThumb();
   updateHUD();
 }
 
@@ -1011,7 +1034,7 @@ let hintSide=0;
 function updateHint(aa){
   // show which side to hold, based on where the body is actually tipping
   let side=0;
-  if(aa>22){const need=P.ang>0?-1:1; if(P.input!==need) side=need;}
+  if(aa>22){const need=CTRL==='drag'?(P.ang>0?1:-1):(P.ang>0?-1:1); if(P.input!==need) side=need;}
   if(side!==hintSide){hintSide=side;$('hintL').classList.toggle('show',side<0);$('hintR').classList.toggle('show',side>0);}
   $('app').classList.toggle('danger',G.danger>0);
 }
@@ -1025,8 +1048,8 @@ function updateHUD(){
   setC('o',o,v=>{hud.oxyF.style.width=v+'%';hud.oxyP.textContent=v+'%';});
   setC('ol',o<20?'low':o<45?'mid':'',v=>{hud.oxyPanel.classList.toggle('low',v==='low');hud.oxyPanel.classList.toggle('mid',v==='mid');});
   const playing=state==='play';
-  setC('hl',playing&&P.input<0,v=>hud.hl.classList.toggle('on',v));
-  setC('hr',playing&&P.input>0,v=>hud.hr.classList.toggle('on',v));
+  setC('hl',playing&&CTRL==='hold'&&P.input<0,v=>hud.hl.classList.toggle('on',v));
+  setC('hr',playing&&CTRL==='hold'&&P.input>0,v=>hud.hr.classList.toggle('on',v));
   setC('tut',playing&&G.tutorial>0,v=>hud.tut.classList.toggle('show',v));
   setC('kN',INV.kayu,v=>{$('skKayuN').textContent=v;$('skKayu').classList.toggle('empty',v<=0);});
   setC('sN',INV.kursi,v=>{$('skKursiN').textContent=v;$('skKursi').classList.toggle('empty',v<=0);});
@@ -1044,15 +1067,25 @@ function dodge(dir){
   const nl=clamp(P.lane+dir,-1,1);
   if(nl!==P.lane){P.lane=nl;P.vel+=dir*8;SFX.swipe();}
 }
-function pDown(id,x,y){initAudio();touches.set(id,{id,x0:x,y0:y,t0:performance.now(),side:sideOf(x),mode:'hold'});recompute();}
+const XMAX=0.8,DRAG_GAIN=2.3; // meters of aisle per full screen width of thumb travel
+let dragId=null;
+function thumbAt(x,y){const r=app.getBoundingClientRect();G.thumb={x:(x-r.left)/S,y:(y-r.top)/S};}
+function shiftTarget(d){P.tx=clamp(P.tx+d,-XMAX,XMAX);touches.forEach(t=>{if(t.tx0!=null)t.tx0+=d;});}
+function pDown(id,x,y){
+  initAudio();
+  if(CTRL==='drag'){touches.set(id,{id,x0:x,y0:y,tx0:P.tx});dragId=id;thumbAt(x,y);return;}
+  touches.set(id,{id,x0:x,y0:y,t0:performance.now(),side:sideOf(x),mode:'hold'});recompute();
+}
 function pMove(id,x,y){
   const d=touches.get(id);if(!d)return;
+  if(CTRL==='drag'){if(id!==dragId)return;const w=app.getBoundingClientRect().width;P.tx=clamp(d.tx0+(x-d.x0)/w*DRAG_GAIN,-XMAX,XMAX);
+    if(Math.abs(P.tx)>=XMAX){d.tx0=P.tx;d.x0=x;}thumbAt(x,y);return;}
   const dx=x-d.x0,dy=y-d.y0,el=performance.now()-d.t0;
   if(Math.abs(dx)>SWIPE_PX&&Math.abs(dx)>Math.abs(dy)*1.2&&el<SWIPE_MS){dodge(Math.sign(dx));d.mode='swipe';d.x0=x;d.y0=y;d.t0=performance.now();}
   else if(el>=SWIPE_MS){if(d.mode==='hold')d.side=sideOf(x);d.x0=x;d.y0=y;d.t0=performance.now();}
   recompute();
 }
-function pUp(id){touches.delete(id);recompute();}
+function pUp(id){touches.delete(id);if(id===dragId){dragId=null;const n=[...touches.keys()].pop();if(n!=null){dragId=n;const t=touches.get(n);t.tx0=P.tx;}else G.thumb=null;}recompute();}
 cv.addEventListener('touchstart',e=>{e.preventDefault();for(const t of e.changedTouches)pDown(t.identifier,t.clientX,t.clientY);},{passive:false});
 cv.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches)pMove(t.identifier,t.clientX,t.clientY);},{passive:false});
 cv.addEventListener('touchend',e=>{e.preventDefault();for(const t of e.changedTouches)pUp(t.identifier);},{passive:false});
@@ -1064,8 +1097,8 @@ window.addEventListener('keydown',e=>{
   const k=e.key;
   if(k==='ArrowLeft'){Inp.kl=true;e.preventDefault();}
   else if(k==='ArrowRight'){Inp.kr=true;e.preventDefault();}
-  else if(!e.repeat&&(k==='a'||k==='A'))dodge(-1);
-  else if(!e.repeat&&(k==='d'||k==='D'))dodge(1);
+  else if(!e.repeat&&(k==='a'||k==='A')){if(CTRL==='drag')shiftTarget(-LANE);else dodge(-1);}
+  else if(!e.repeat&&(k==='d'||k==='D')){if(CTRL==='drag')shiftTarget(LANE);else dodge(1);}
   else if(!e.repeat&&k==='1')useItem('kayu');
   else if(!e.repeat&&k==='2')useItem('kursi');
   else if(k===' '||k==='Enter'){if(state==='menu'||state==='over'){e.preventDefault();startGame();}}
@@ -1077,6 +1110,22 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame()
 window.addEventListener('blur',()=>clearInputs());
 
 /* ===== buttons ===== */
+function applyCtrlTexts(){
+  const dr=CTRL==='drag';
+  $('ctrlBtn').textContent='🎮 Kontrol: '+(dr?'Geser':'Tahan');
+  $('hintLt').innerHTML=dr?'GESER<br>KIRI':'TAHAN<br>KIRI';$('hintRt').innerHTML=dr?'GESER<br>KANAN':'TAHAN<br>KANAN';
+  $('tutL').innerHTML=dr?'◀ GESER<small>jempol ke kiri</small>':'◀ TAHAN<small>dorong badan ke kiri</small>';
+  $('tutR').innerHTML=dr?'GESER ▶<small>jempol ke kanan</small>':'TAHAN ▶<small>dorong badan ke kanan</small>';
+  $('tutM').innerHTML=dr?'Badan miring? <u>Geser ke arah miringnya</u> buat nahan':'Badan miring? Tahan sisi <u>sebaliknya</u> · jarum di HIJAU';
+  $('how1k').textContent=dr?'⇆ GESER':'◀ TAHAN ▶';$('how2k').textContent=dr?'⚠ REM':'⇆ SWIPE';
+  $('how1').innerHTML=dr?'Taruh jempol di mana aja lalu <b>geser kiri/kanan</b> buat pindah posisi & ngehindar rintangan.':'Kereta bikin badan miring. <b>Miring ke kanan? Tahan KIRI.</b> Miring ke kiri? Tahan KANAN. Jaga jarum di <b>hijau</b>.';
+  $('how2').innerHTML=dr?'Kereta ngerem / nikung? Badan oleng. <b>Geser ke arah miringnya</b> buat nangkep badan. Jaga jarum di <b>hijau</b>.':'Swipe cepat ke samping buat geser & ngehindar rintangan.';
+}
+function toggleCtrl(){
+  CTRL=CTRL==='drag'?'hold':'drag';try{localStorage.setItem('skrl_ctrl',CTRL);}catch(e){}
+  P.lane=clamp(Math.round(P.X/LANE),-1,1);P.tx=P.ref=P.X;clearInputs();clearHint();applyCtrlTexts();SFX.click();
+  toast(CTRL==='drag'?'Kontrol: GESER jempol kiri/kanan':'Kontrol: TAHAN kiri/kanan + SWIPE',1800);
+}
 const on=(id,fn)=>$(id).addEventListener('click',e=>{e.stopPropagation();initAudio();fn();});
 on('startBtn',startGame);
 on('retryBtn',()=>{refreshMenu();startGame();});
@@ -1090,6 +1139,7 @@ on('storeBtnMenu',()=>openStore('startScreen'));
 on('storeBtnOver',()=>openStore('overScreen'));
 on('storeBtnPause',()=>openStore('pauseScreen'));
 on('storeBack',closeStore);
+on('ctrlBtn',toggleCtrl);
 on('buyKayu',()=>openPay('kayu'));
 on('buyKursi',()=>openPay('kursi'));
 on('skKayu',()=>useItem('kayu'));
@@ -1114,7 +1164,7 @@ window.addEventListener('orientationchange',()=>setTimeout(resize,200));
 
 /* ===== boot ===== */
 if(typeof THREE==='undefined'){document.body.innerHTML='<p style="color:#fff;font:16px system-ui;padding:24px;text-align:center">Gagal memuat engine 3D. Cek koneksi internet lalu muat ulang.</p>';return;}
-init3D();makeIcons();resize();refreshMenu();updateRoute();
+init3D();makeIcons();resize();refreshMenu();updateRoute();applyCtrlTexts();
 if(starter){saveInv();setTimeout(()=>toast('🎁 Hadiah pemula: 1 Kayu Putih + 1 Kursi Prioritas',3000),600);}
 let last=performance.now();
 function loop(now){let dt=(now-last)/1000;last=now;if(!(dt>0))dt=0;if(dt>0.05)dt=0.05;update(dt);render();requestAnimationFrame(loop);}
